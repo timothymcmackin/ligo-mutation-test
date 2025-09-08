@@ -1,0 +1,55 @@
+import Tezos = Tezos.Next;
+
+export type pokeMessage = {
+    sender : address,
+    feedback : string
+};
+
+export type storage = {
+    pokeTraces : map<address, pokeMessage>,
+    feedback : string
+};
+
+type return_type = [list<operation>, storage];
+
+type returned_feedback = [address, string];
+
+export namespace PokeGameContract {
+
+  // Poke the specified contract and store its feedback from its view
+  @entry
+  const pokeAndGetFeedback = (targetAddress: address, storage: storage): return_type => {
+
+    // Later in part 2: call a view instead
+    const feedbackOpt: option<string> = Tezos.View.call("feedback", unit, targetAddress);
+    const feedbackMessage = Option.value_with_error("Failed to call the view", feedbackOpt);
+
+    const newMessage: pokeMessage = {
+      sender: targetAddress,
+      feedback: feedbackMessage,
+    };
+
+    return [[], {
+      ...storage,
+      pokeTraces: Map.add(Tezos.get_source(), newMessage, storage.pokeTraces),
+    }];
+  }
+
+  // Unused entrypoint that should be caught by mutation tests
+  @entry
+  const changeFeedback = (_: unit, storage: storage): return_type => {
+    let newFeedback = "hello";
+    const five = 2 + 3;
+    if (five == 5) {
+      newFeedback = "five";
+    }
+    return [[], {
+      ...storage,
+      feedback: newFeedback,
+    }];
+  }
+
+  @view
+  const feedback = (_: unit, storage: storage): string => storage.feedback;
+}
+
