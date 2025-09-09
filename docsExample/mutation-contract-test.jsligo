@@ -1,0 +1,17 @@
+// This is mutation-contract-test.jsligo
+
+#import "mutation-contract.jsligo" "MutationContract"
+import Test = Test.Next;
+type storage = int;
+type param = parameter_of MutationContract.AddSub;
+const initial_storage = 7;
+
+const tester = (taddr: typed_address<param, storage>, _c: michelson_contract<param, storage> , _: int): unit => {
+  Test.Contract.transfer_exn(Test.Typed_address.get_entrypoint("add", taddr), 7, 0tez);
+  Assert.assert(Test.Typed_address.get_storage(taddr) == initial_storage + 7);
+}
+
+const test_original = (() => {
+  let orig = Test.Originate.contract(contract_of(MutationContract.AddSub), initial_storage, 0tez);
+  return tester(orig.taddr);
+})();
