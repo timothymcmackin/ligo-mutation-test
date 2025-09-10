@@ -6,7 +6,11 @@ type storage = int;
 type param = parameter_of MutationContract.AddSub;
 const initial_storage = 7;
 
-const tester = (taddr: typed_address<param, storage>, _c: michelson_contract<param, storage> , _: int): unit => {
+const tester = (
+    taddr: typed_address<param, storage>,
+    _c: michelson_contract<param, storage>
+    , _: int
+  ): unit => {
   Test.Contract.transfer_exn(Test.Typed_address.get_entrypoint("add", taddr), 7, 0tez);
   Assert.assert(Test.Typed_address.get_storage(taddr) == initial_storage + 7);
 }
@@ -15,3 +19,16 @@ const test_original = (() => {
   let orig = Test.Originate.contract(contract_of(MutationContract.AddSub), initial_storage, 0tez);
   return tester(orig.taddr);
 })();
+
+
+const test_mutation =
+  match(Test.Mutation.contract(contract_of(MutationContract.AddSub), initial_storage, 0tez, tester)) {
+    when(None()): unit;
+    when(Some(pmutation)): do {
+      Test.IO.log(pmutation[1]);
+      // In a real program, one would write `failwith "A mutation passes"`
+      // Because we want to demonstrate the issue without an actual error
+      // a milder println is used in this document.
+      Test.IO.println("A mutation of the contract still passes the tests!");
+    }
+  };
