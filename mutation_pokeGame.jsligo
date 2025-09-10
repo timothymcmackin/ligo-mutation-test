@@ -4,30 +4,38 @@
 
 import Test = Test.Next;
 
-// Mutation test configuration
-const _tests = (
-  ta: typed_address<parameter_of PokeGame.PokeGameContract, PokeGame.storage>,
-  _: michelson_contract<parameter_of PokeGame.PokeGameContract, PokeGame.storage>,
-  _2: int
-): unit => PokeGameTest.unitTest(PokeGameTest.setUpAccount(), ta);
+type param = parameter_of PokeGame.PokeGameContract;
+type storage = PokeGame.storage;
 
-const test_mutation =
-  (
-    (): unit => {
-      const mutationErrorList =
-        Test.Mutation.All.contract(
-          contract_of(PokeGame.PokeGameContract),
-          PokeGameTest.initial_storage,
-          0mutez,
-          _tests
-        );
-      match(mutationErrorList) {
-        when ([]): Test.IO.log("Mutation tests passed");
-        when ([head, ..._tail]):
-          do {
-            Test.IO.log(head);
-            failwith(Test.String.show(head[1]))
-          }
+// Run unit tests with the deployed mutated contract
+const run_test_with_mutation = (
+    taddr: typed_address<param, storage>,
+    _c: michelson_contract<param, storage>,
+    _: int
+): unit => {
+  // Set up account
+  const account1 = PokeGameTest.setUpAccount();
+  // Run test with account and deployed mutated version of contract
+  PokeGameTest.unitTest(account1, taddr);
+}
+
+const test_mutation = ((): unit => {
+  // Run the tests with mutated versions of the contract
+  const mutationErrorList = Test.Mutation.contract(
+    contract_of(PokeGame.PokeGameContract),
+    PokeGameTest.initial_storage,
+    0tez,
+    run_test_with_mutation
+  );
+
+  // Check if any mutated versions passed all tests
+  match(mutationErrorList) {
+    when (None()): Test.IO.log("Mutation tests passed");
+    when (Some(passingMutations)):
+      do {
+        Test.IO.log("Some mutated versions passed tests:");
+        Test.IO.log(passingMutations[1]);
+        failwith(Test.String.show(passingMutations[1]));
       };
-    }
-  )();
+  }
+})();
